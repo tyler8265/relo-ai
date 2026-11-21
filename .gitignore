@@ -2,16 +2,14 @@
 venv/
 __pycache__/
 .streamlit/secrets.toml
-
-# Backend
+.claude/skills/
+.claude/settings.local.json
+.impeccable/config.local.json
+.impeccable/hook.cache.json
 backend/.env
 backend/venv/
 backend/node_modules/
 backend/__pycache__/
 CLAUDE.md
 
-# Claude Code skills (large, installed locally) and personal settings
-.claude/skills/
-.claude/settings.local.json
-.impeccable/config.local.json
-.impeccable/hook.cache.json
+
