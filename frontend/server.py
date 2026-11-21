@@ -2,9 +2,8 @@
 Relo AI web server: serves the HTML/CSS/JS front end and one JSON endpoint for the agent.
 Standard library only.  Run from the repo root:  python3 frontend/server.py   (then open http://localhost:8000)
 
-Agent selection:
-  - If agent.py exists at the repo root, its respond(messages) is used.
-  - Otherwise (or with RELO_MOCK=1) the mock agent in frontend/mock_agent.py is used.
+Agent selection lives in backend_bridge.py: the backend's demo cache, then the live agent in
+backend/agent.py, then the mock agent (labeled). RELO_MOCK=1 forces the mock.
 """
 from __future__ import annotations
 
@@ -26,11 +25,7 @@ for p in (ROOT, HERE):
 from adapter import normalize  # noqa: E402
 from sample_data import SAMPLES  # noqa: E402
 
-USE_MOCK = os.environ.get("RELO_MOCK") == "1" or not (ROOT / "agent.py").exists()
-if USE_MOCK:
-    from mock_agent import respond  # noqa: E402
-else:
-    from agent import respond  # noqa: E402,F401
+import backend_bridge  # noqa: E402
 
 MAX_BODY = 200_000
 
@@ -52,7 +47,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         path, _, query = self.path.partition("?")
         if path == "/api/config":
-            return self._json(200, {"mock": USE_MOCK})
+            st = backend_bridge.status()
+            return self._json(200, {"mock": not st["live"] and not st["backend"], **st})
         if path == "/api/sample":
             name = query.split("name=", 1)[1].split("&")[0] if "name=" in query else "options"
             if name not in SAMPLES:
@@ -80,7 +76,8 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(messages, list) or not messages:
                 return self._json(400, {"error": "No messages sent."})
             messages = [{"role": str(m.get("role")), "content": str(m.get("content", ""))} for m in messages]
-            return self._json(200, normalize(respond(messages)))
+            raw, source = backend_bridge.respond(messages)
+            return self._json(200, {**normalize(raw), "source": source})
         except Exception as e:  # keep the demo alive on rate limits etc.
             traceback.print_exc()
             return self._json(502, {"error": f"The planner hit a problem: {e}"})
@@ -93,7 +90,14 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     port = int(os.environ.get("PORT", 8000))
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"Relo AI running at http://localhost:{port}  ({'mock agent' if USE_MOCK else 'agent.py'})")
+    st = backend_bridge.status()
+    if st["live"]:
+        mode = "live backend (backend/agent.py)"
+    elif st["backend"]:
+        mode = f"backend demo cache only; live agent offline: {st['reason']}"
+    else:
+        mode = f"mock agent ({st['reason']})"
+    print(f"Relo AI running at http://localhost:{port}  [{mode}]")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

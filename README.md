@@ -149,17 +149,37 @@ The API contract (every field of the `/plan` response) is documented in [CLAUDE.
 - If Groq fails mid-demo, the API returns a sample plan instead of an error.
 - Have the backup video ready to play.
 
-## Running the front end
+## Running the app
+
+The web UI and the backend agent run as one process:
 
 ```bash
-python3 frontend/server.py        # then open http://localhost:8000
+backend/venv/bin/python frontend/server.py     # then open http://localhost:8000
 ```
 
-No packages needed. The server uses the real agent if `agent.py` exists at the repo root (it must expose
-`respond(messages)`, returning the format in `contract.py`); otherwise it uses the mock agent and shows a
-"Mock data" badge. Force the mock with `RELO_MOCK=1`.
+One-time setup (already done on Yusuf's machine): the backend needs Python 3.11+.
 
-Demo shortcuts (cached and safe from rate limits): `http://localhost:8000/#sample` loads the sample backend
-response with three city options, and `#ask=<message>||<follow-up>` sends messages on load.
+```bash
+python3 -m pip install --user uv
+~/Library/Python/3.9/bin/uv python install 3.12
+~/Library/Python/3.9/bin/uv venv backend/venv --python 3.12
+~/Library/Python/3.9/bin/uv pip install --python backend/venv/bin/python groq python-dotenv fastapi uvicorn
+```
+
+Then put the Groq key in `backend/.env` (git-ignored):
+
+```
+GROQ_API_KEY=...
+GROQ_MODEL=...
+```
+
+Where answers come from (`frontend/backend_bridge.py`), in order:
+
+1. `backend/demo_cache.json`: saved real answers for the three demo inputs (the example buttons). Works with no key.
+2. The live agent, `backend/agent.py` `build_plan(situation)`. Chat messages are joined into one situation.
+3. The mock agent, labeled "Mock data", if the live agent can't load or fails. `RELO_MOCK=1` forces it.
+
+The terminal line at startup says which mode is active. Demo shortcuts: `http://localhost:8000/#sample` loads
+a saved backend response with three city options; `#ask=<message>||<follow-up>` sends messages on load.
 
 The older Streamlit version still works as a fallback: `streamlit run frontend/app.py`.

@@ -12,6 +12,7 @@ COST_LABELS = {
     "movers": "Movers / truck",
     "furniture": "Furniture & setup",
     "paycheck_gap": "Gap before first paycheck",
+    "expenses_before_first_paycheck": "Expenses before first paycheck",
     "broker_fee": "Broker fee",
     "emergency_buffer": "Emergency buffer",
 }
@@ -50,13 +51,23 @@ def _plan(raw: dict, profile: dict) -> dict:
     total, monthly = raw["total_needed"], raw["monthly_savings"]
 
     # Sanity check on the backend's numbers: does the monthly amount actually reach the goal?
+    # Only checkable when the response says what's already saved: the backend subtracts savings
+    # without echoing them back, so without that figure any "gap" may just be money already saved.
     reached = profile.get("current_savings", 0) + monthly * months
-    if reached < total:
+    shortfall = max(0, total - reached) if "current_savings" in profile else 0
+    if shortfall > monthly:
         warnings.append({
             "level": "error",
-            "text": f"Saving ${monthly:,.0f}/month for {months} months only reaches ${reached:,.0f} "
-                    f"by {deadline:%B %Y}, ${total - reached:,.0f} short of the ${total:,.0f} goal.",
+            "text": f"Saving ${monthly:,.0f}/month for {months} months reaches ${reached:,.0f} by {deadline:%B %Y}, "
+                    f"${shortfall:,.0f} short of the ${total:,.0f} goal unless you already have that much saved.",
         })
+    else:
+        shortfall = 0
+
+    current = raw.get("current_budget") or None
+    if current:
+        current = {"take_home": current.get("take_home", 0),
+                   "surplus": current.get("surplus", current.get("leftover", 0))}
 
     return {
         "profile": profile,
@@ -67,6 +78,8 @@ def _plan(raw: dict, profile: dict) -> dict:
         "move_in_costs": costs,
         "monthly_budget": budget,
         "warnings": warnings,
+        "shortfall": shortfall,
+        "current_budget": current,
     }
 
 
@@ -91,6 +104,9 @@ def normalize(raw: dict) -> dict:
     """Returns {"type": "question", "message"} or {"type": "plan", "message", "plan", "options"}."""
     if raw.get("follow_up_question"):
         return {"type": "question", "message": raw["follow_up_question"]}
+    if not raw.get("deadline") or raw.get("total_needed") is None or raw.get("monthly_savings") is None:
+        return {"type": "question",
+                "message": "I couldn't build a plan from that. What's your salary, where are you moving, and when?"}
 
     base = dict(raw.get("profile") or {})
     options = [_option(o, base) for o in raw.get("options") or [] if o.get("deadline")]

@@ -295,6 +295,10 @@ svg { display: block; }
 .legend .sw { width: 14px; height: 14px; border-radius: 4px; }
 .legend .v { font-family: var(--f-cond); font-weight: 700; font-size: var(--t-22); }
 .legend .take { border-top: 1px solid var(--line); padding-top: var(--s-2); margin-top: var(--s-1); font-weight: 600; }
+.fits { margin-top: var(--s-4); padding: var(--s-3) var(--s-4); border-radius: var(--r-sm); font-size: var(--t-16); }
+.fits b { font-family: var(--f-cond); font-size: var(--t-22); }
+.fits.ok { background: var(--teal-wash); color: var(--teal-ink); }
+.fits.bad { background: var(--red-wash); color: #7A1712; }
 .short-note { margin-top: var(--s-3); color: var(--red); font-weight: 600; }
 
 .details { display: grid; grid-template-columns: auto 1fr; gap: var(--s-2) var(--s-5); margin: 0; }

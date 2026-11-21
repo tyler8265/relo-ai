@@ -83,6 +83,7 @@
       typing.remove();
       if (!res.ok || data.error) throw new Error(data.error || `The server answered ${res.status}.`);
       state.messages.push({ role: "assistant", content: data.message });
+      setSource(data.source);
       if (data.type === "question") {
         addMessage("bot", `<span class="q-label">Quick question</span>${md(data.message)}`, "question");
         els.input.focus();
@@ -137,6 +138,14 @@
       rows.push({ d, saved });
     }
     return rows;
+  }
+
+  function fitsNote(p) {
+    const c = p.current_budget;
+    if (!c) return "";
+    const fits = c.surplus >= p.monthly_savings;
+    return `<p class="fits ${fits ? "ok" : "bad"}">Right now you have <b>${money(c.surplus)}</b> a month left after costs. ${
+      fits ? `Saving ${money(p.monthly_savings)} a month fits.` : `Saving ${money(p.monthly_savings)} a month doesn't fit yet.`}</p>`;
   }
 
   function renderOptions() {
@@ -201,8 +210,8 @@
     // barcode
     const rows = schedule(p);
     const reached = rows.length ? rows[rows.length - 1].saved : 0;
-    const short = reached < p.target_total - 0.5;
-    const top = Math.max(p.target_total, reached) || 1;
+    const short = (p.shortfall || 0) > 0;
+    const top = short ? p.target_total : Math.max(reached, 1);
     const bars = rows.map((r, i) => {
       const label = `${fmtDate(r.d, { month: "short", year: "numeric" })}: ${money(r.saved)} saved`;
       return `<span class="bar${i === rows.length - 1 ? " last" : ""}" style="height:${(r.saved / top) * 100}%" title="${esc(label)}"></span>`;
@@ -286,12 +295,19 @@
           <div class="budget-bar" aria-hidden="true">${budgetBar}</div>
           <ul class="legend">${legend}<li class="take"><span></span><span>Take-home pay${where}</span><span class="v">${money(b.take_home)}</span></li></ul>
           ${left < 0 ? `<p class="short-note">You'd be ${money(-left)} short every month after the move.</p>` : ""}
+          ${fitsNote(p)}
         </section>
         ${det ? `<section class="sec card" aria-labelledby="h-details"><div class="sec-head"><h2 id="h-details">What I understood</h2></div><dl class="details">${det}</dl><p class="sec-note">Something off? Correct it in the chat.</p></section>` : ""}
       </div>
 
-      <p class="footnote">${state.mock ? "Mock data: these numbers are placeholders until the Gemini agent is connected." : "Every dollar figure comes from a data tool, not the AI. Estimates are marked."}</p>
+      <p class="footnote">${state.mock ? "Mock data: these numbers are placeholders, not your plan." : "Every dollar figure comes from a data tool, not the AI. Estimates are marked."}</p>
     </div>`;
+  }
+
+  function setSource(source) {
+    if (!source) return;
+    state.mock = source === "mock";
+    els.mockBadge.hidden = !state.mock;
   }
 
   // ---------- reset / sample ----------
@@ -312,6 +328,7 @@
       state.messages.push({ role: "user", content: "(Loaded the sample backend response)" }, { role: "assistant", content: data.message });
       addMessage("user", "<em>Loaded the sample backend response</em>");
       addMessage("bot", md(data.message));
+      setSource("sample");
       showPlan(data.plan, data.options);
     } catch {
       addMessage("bot", "Couldn't load the sample. Is the server running?", "error");
@@ -338,6 +355,7 @@
   });
 
   fetch("/api/config").then((r) => r.json()).then((c) => { state.mock = !!c.mock; els.mockBadge.hidden = !state.mock; }).catch(() => {});
+  // A sample response is the teammate's real backend output: label it as such, not as mock.
 
   // Demo shortcuts: /#sample loads the sample response; /#ask=<text>||<text> sends messages in order on load.
   const hash = decodeURIComponent(location.hash.slice(1));
