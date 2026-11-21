@@ -144,3 +144,18 @@ print(resp.text)
 
 - Cache responses for the demo inputs so a rate-limit error can't break it live.
 - Have the backup video ready to play.
+
+## Running the front end
+
+```bash
+python3 frontend/server.py        # then open http://localhost:8000
+```
+
+No packages needed. The server uses the real agent if `agent.py` exists at the repo root (it must expose
+`respond(messages)`, returning the format in `contract.py`); otherwise it uses the mock agent and shows a
+"Mock data" badge. Force the mock with `RELO_MOCK=1`.
+
+Demo shortcuts (cached and safe from rate limits): `http://localhost:8000/#sample` loads the sample backend
+response with three city options, and `#ask=<message>||<follow-up>` sends messages on load.
+
+The older Streamlit version still works as a fallback: `streamlit run frontend/app.py`.

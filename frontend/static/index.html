@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reloai · Plan what your move costs</title>
+<meta name="description" content="Describe your move in plain English and get a month-by-month savings plan built on real cost data.">
+<meta name="theme-color" content="#0B3A8F">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#composer-input">Skip to the message box</a>
+
+<svg width="0" height="0" class="defs" aria-hidden="true">
+  <defs>
+    <linearGradient id="brand-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0A4BAA"/><stop offset=".5" stop-color="#6E5BC9"/><stop offset="1" stop-color="#C66BE2"/>
+    </linearGradient>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 2.8 19.5h18.4L12 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7.8" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.5v5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.3" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-plane" viewBox="0 0 24 24"><path d="M21 12.6v-1.2l-8-4.6V3.6a1.4 1.4 0 0 0-2.8 0v3.2L2.4 11.4v1.2l7.8-1.9v4.5l-2.4 1.8v1.2l3.6-.9 3.6.9V17l-2.4-1.8v-4.5L21 12.6Z" fill="currentColor"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<header class="topbar">
+  <a class="brand" href="/" aria-label="reloai home">
+    <img src="logo.svg" alt="" width="36" height="36">
+    <span class="wordmark">reloai</span>
+  </a>
+  <span class="mock-badge" id="mock-badge" hidden title="Numbers are placeholders until the Gemini agent is connected.">Mock data</span>
+  <nav class="whatifs" id="whatifs" aria-label="What if" hidden>
+    <button type="button" class="chip" data-ask="What if I get a roommate?">Add a roommate</button>
+    <button type="button" class="chip" data-ask="What if I skip the roommate?">Live alone</button>
+    <button type="button" class="chip" data-ask="What if I move in March?">Move in March</button>
+  </nav>
+  <button type="button" class="reset" id="reset" hidden>
+    <svg aria-hidden="true"><use href="#i-reset"/></svg>Start over
+  </button>
+</header>
+
+<div class="layout">
+  <section class="chat" aria-label="Your situation">
+    <div class="thread" id="thread" aria-live="polite">
+      <div class="intro" id="intro">
+        <h1>Where are you moving?</h1>
+        <p>Tell me about it in one go: your <strong>salary</strong>, where you <strong>live now</strong>, any <strong>debt</strong>, your <strong>bills</strong>, where you're <strong>going</strong> and <strong>when</strong>. I'll work out what to save each month.</p>
+        <div class="examples" id="examples">
+          <button type="button" class="example" data-text="I'm graduating in May, making 85k in Chicago, $20k in student loans, want to move to Seattle by September, open to a roommate.">
+            <span class="ex-route">Chicago → Seattle</span>
+            <span class="ex-text">85k, $20k in loans, open to a roommate</span>
+          </button>
+          <button type="button" class="example" data-text="New job in NYC paying $70k, I live in Austin, no debt, $2k saved, moving by August.">
+            <span class="ex-route">Austin → New York</span>
+            <span class="ex-text">70k, no debt, $2k saved, by August</span>
+          </button>
+          <button type="button" class="example" data-text="I want to move to Denver.">
+            <span class="ex-route">Somewhere → Denver</span>
+            <span class="ex-text">Not much detail, so I'll ask</span>
+          </button>
+        </div>
+        <button type="button" class="linkish" id="load-sample">Load the sample backend response</button>
+      </div>
+    </div>
+
+    <form class="composer" id="composer">
+      <label for="composer-input" class="sr-only">Describe your move</label>
+      <textarea id="composer-input" rows="2" placeholder="Describe your move…" autocomplete="off"></textarea>
+      <button type="submit" class="send" id="send" aria-label="Send">
+        <span>Send</span><svg aria-hidden="true"><use href="#i-send"/></svg>
+      </button>
+    </form>
+  </section>
+
+  <main class="board" id="board" tabindex="-1">
+    <div class="blank" id="blank">
+      <div class="blank-pass" aria-hidden="true">
+        <div class="bp-main">
+          <div class="bp-band"></div>
+          <div class="bp-route"><span>???</span><svg><use href="#i-plane"/></svg><span>???</span></div>
+          <div class="bp-fields"><i></i><i></i><i></i></div>
+        </div>
+        <div class="bp-stub"><i class="bp-fare"></i><i></i><span class="bp-code"><b style="height:12%"></b><b style="height:21%"></b><b style="height:30%"></b><b style="height:40%"></b><b style="height:50%"></b><b style="height:60%"></b><b style="height:70%"></b><b style="height:80%"></b><b style="height:90%"></b><b style="height:100%"></b></span></div>
+      </div>
+      <h2>Your pass prints here</h2>
+      <ul class="blank-list">
+        <li><strong>The fare:</strong> the total you need by your move date, and what that means each month.</li>
+        <li><strong>Move-in costs:</strong> first month's rent, deposit, movers, furniture and the gap before your first paycheck.</li>
+        <li><strong>Heads-ups:</strong> rent over 30% of your pay, NYC's 40x-rent rule, a savings rate that's too steep.</li>
+      </ul>
+    </div>
+    <div id="plan" hidden></div>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

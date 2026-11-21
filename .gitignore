@@ -1,0 +1,10 @@
+.env
+venv/
+__pycache__/
+.streamlit/secrets.toml
+
+# Claude Code skills (large, installed locally) and personal settings
+.claude/skills/
+.claude/settings.local.json
+.impeccable/config.local.json
+.impeccable/hook.cache.json
