@@ -41,6 +41,9 @@ MIN_PER_STATE = 10
 LOOSE_MOE_RATIO = 0.5
 BIG_PLACE = 25_000
 OUT = Path(__file__).parent / "data" / "places.json"
+# Every US place (no rent needed), so towns without rent data can still be located and matched
+# to the nearest place that has it. Rows: [name, state, lat, lon, population].
+COORDS_OUT = Path(__file__).parent / "data" / "place_coords.json"
 
 # ACS "no estimate" sentinels are large negative numbers.
 def _num(v: str) -> int | None:
@@ -64,6 +67,9 @@ def clean_name(raw: str) -> str:
     # Strip ONE legal suffix: "Jersey City city" -> "Jersey City",
     # "Nashville-Davidson metropolitan government" -> "Nashville-Davidson"
     name = _SUFFIX.sub("", name, count=1)
+    # Massachusetts "town cities": "Braintree Town city" -> "Braintree"
+    if raw.strip().endswith(" Town city"):
+        name = name.removesuffix(" Town")
     # "Nashville-Davidson" -> "Nashville", "Louisville/Jefferson County" -> "Louisville"
     if re.search(r"(Davidson|Jefferson County|Marion County|Athens-Clarke|Augusta-Richmond|Lexington-Fayette)", name):
         name = re.split(r"[-/]", name)[0]
@@ -93,7 +99,9 @@ def main(folder: Path) -> None:
                 continue
             for level, max_ratio in (("high", MAX_MOE_RATIO), ("lower", LOOSE_MOE_RATIO)):
                 beds = {}
-                for k, i in (("0", 2), ("1", 3), ("2", 4), ("3", 5)):
+                # Studio through 4BR. The "5 or more" group is skipped: it mixes very different
+                # homes and often comes out cheaper than 4BR (e.g. Boston), which isn't usable.
+                for k, i in (("0", 2), ("1", 3), ("2", 4), ("3", 5), ("4", 6)):
                     est, moe = _num(row.get(f"B25031_E00{i}", "")), _num(row.get(f"B25031_M00{i}", ""))
                     beds[k] = est if est and moe is not None and moe <= max_ratio * est else None
                 if beds["1"] is not None and not (beds["2"] and beds["1"] < MIN_1BR_TO_2BR * beds["2"]):
@@ -108,12 +116,16 @@ def main(folder: Path) -> None:
                 pop[row["GEO_ID"][9:]] = n
 
     by_state: dict[str, list[dict]] = {}
+    coords: list[list] = []
     with open(folder / "2024_Gaz_place_national.txt", newline="") as f:
         reader = csv.reader(f, delimiter="\t")
         header = [h.strip() for h in next(reader)]
         for cols in reader:
             row = dict(zip(header, (c.strip() for c in cols)))
             geoid, state = row["GEOID"], row["USPS"]
+            if state != "PR":
+                coords.append([clean_name(row["NAME"]), state, round(float(row["INTPTLAT"]), 3),
+                               round(float(row["INTPTLONG"]), 3), pop.get(geoid, 0)])
             level = "high" if geoid in rent["high"] else "lower" if geoid in rent["lower"] else None
             if state == "PR" or level is None or geoid not in pop:
                 continue
@@ -148,6 +160,8 @@ def main(folder: Path) -> None:
                   "2024 Gazetteer (coordinates)",
         "places": places,
     }, separators=(",", ":")) + "\n")
+    COORDS_OUT.write_text(json.dumps(coords, separators=(",", ":")) + "\n")
+    print(f"Wrote {len(coords)} place coordinates to {COORDS_OUT}")
     counts = {s: sum(p["state"] == s for p in places) for s in by_state}
     print(f"Wrote {len(places)} places in {len(counts)} states to {OUT}")
     print("Fewest per state:", sorted(counts.items(), key=lambda kv: kv[1])[:5])

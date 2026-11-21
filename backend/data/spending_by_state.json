@@ -1,0 +1,578 @@
+{
+ "source": "U.S. Bureau of Economic Analysis, per capita personal consumption expenditures by state (SAPCE2), 2024: groceries, dining out, clothing, gas, transportation, recreation",
+ "year": 2024,
+ "states": {
+  "AK": {
+   "monthly": 1557,
+   "categories": {
+    "groceries": 403,
+    "clothing": 100,
+    "gas": 81,
+    "transportation": 246,
+    "recreation": 285,
+    "dining out": 442
+   }
+  },
+  "AL": {
+   "monthly": 1044,
+   "categories": {
+    "groceries": 323,
+    "clothing": 111,
+    "gas": 121,
+    "transportation": 94,
+    "recreation": 116,
+    "dining out": 279
+   }
+  },
+  "AR": {
+   "monthly": 999,
+   "categories": {
+    "groceries": 308,
+    "clothing": 118,
+    "gas": 136,
+    "transportation": 87,
+    "recreation": 102,
+    "dining out": 248
+   }
+  },
+  "AZ": {
+   "monthly": 1290,
+   "categories": {
+    "groceries": 328,
+    "clothing": 120,
+    "gas": 106,
+    "transportation": 196,
+    "recreation": 186,
+    "dining out": 354
+   }
+  },
+  "CA": {
+   "monthly": 1606,
+   "categories": {
+    "groceries": 400,
+    "clothing": 170,
+    "gas": 102,
+    "transportation": 213,
+    "recreation": 273,
+    "dining out": 448
+   }
+  },
+  "CO": {
+   "monthly": 1594,
+   "categories": {
+    "groceries": 406,
+    "clothing": 146,
+    "gas": 111,
+    "transportation": 210,
+    "recreation": 274,
+    "dining out": 447
+   }
+  },
+  "CT": {
+   "monthly": 1381,
+   "categories": {
+    "groceries": 371,
+    "clothing": 133,
+    "gas": 87,
+    "transportation": 216,
+    "recreation": 227,
+    "dining out": 347
+   }
+  },
+  "DC": {
+   "monthly": 1998,
+   "categories": {
+    "groceries": 636,
+    "clothing": 233,
+    "gas": 119,
+    "transportation": 328,
+    "recreation": 187,
+    "dining out": 495
+   }
+  },
+  "DE": {
+   "monthly": 1263,
+   "categories": {
+    "groceries": 353,
+    "clothing": 126,
+    "gas": 133,
+    "transportation": 133,
+    "recreation": 154,
+    "dining out": 364
+   }
+  },
+  "FL": {
+   "monthly": 1379,
+   "categories": {
+    "groceries": 398,
+    "clothing": 110,
+    "gas": 90,
+    "transportation": 180,
+    "recreation": 188,
+    "dining out": 413
+   }
+  },
+  "GA": {
+   "monthly": 1308,
+   "categories": {
+    "groceries": 375,
+    "clothing": 128,
+    "gas": 119,
+    "transportation": 170,
+    "recreation": 187,
+    "dining out": 329
+   }
+  },
+  "HI": {
+   "monthly": 1548,
+   "categories": {
+    "groceries": 473,
+    "clothing": 129,
+    "gas": 60,
+    "transportation": 210,
+    "recreation": 207,
+    "dining out": 469
+   }
+  },
+  "IA": {
+   "monthly": 1109,
+   "categories": {
+    "groceries": 342,
+    "clothing": 98,
+    "gas": 154,
+    "transportation": 132,
+    "recreation": 126,
+    "dining out": 257
+   }
+  },
+  "ID": {
+   "monthly": 1068,
+   "categories": {
+    "groceries": 319,
+    "clothing": 99,
+    "gas": 134,
+    "transportation": 132,
+    "recreation": 127,
+    "dining out": 257
+   }
+  },
+  "IL": {
+   "monthly": 1325,
+   "categories": {
+    "groceries": 346,
+    "clothing": 145,
+    "gas": 99,
+    "transportation": 204,
+    "recreation": 179,
+    "dining out": 352
+   }
+  },
+  "IN": {
+   "monthly": 1099,
+   "categories": {
+    "groceries": 338,
+    "clothing": 109,
+    "gas": 128,
+    "transportation": 120,
+    "recreation": 119,
+    "dining out": 285
+   }
+  },
+  "KS": {
+   "monthly": 1136,
+   "categories": {
+    "groceries": 375,
+    "clothing": 101,
+    "gas": 106,
+    "transportation": 134,
+    "recreation": 140,
+    "dining out": 280
+   }
+  },
+  "KY": {
+   "monthly": 1099,
+   "categories": {
+    "groceries": 358,
+    "clothing": 100,
+    "gas": 125,
+    "transportation": 98,
+    "recreation": 138,
+    "dining out": 280
+   }
+  },
+  "LA": {
+   "monthly": 1127,
+   "categories": {
+    "groceries": 340,
+    "clothing": 119,
+    "gas": 120,
+    "transportation": 95,
+    "recreation": 130,
+    "dining out": 323
+   }
+  },
+  "MA": {
+   "monthly": 1515,
+   "categories": {
+    "groceries": 401,
+    "clothing": 138,
+    "gas": 77,
+    "transportation": 251,
+    "recreation": 236,
+    "dining out": 412
+   }
+  },
+  "MD": {
+   "monthly": 1234,
+   "categories": {
+    "groceries": 329,
+    "clothing": 131,
+    "gas": 96,
+    "transportation": 155,
+    "recreation": 188,
+    "dining out": 335
+   }
+  },
+  "ME": {
+   "monthly": 1456,
+   "categories": {
+    "groceries": 444,
+    "clothing": 103,
+    "gas": 156,
+    "transportation": 147,
+    "recreation": 222,
+    "dining out": 384
+   }
+  },
+  "MI": {
+   "monthly": 1123,
+   "categories": {
+    "groceries": 350,
+    "clothing": 116,
+    "gas": 114,
+    "transportation": 126,
+    "recreation": 138,
+    "dining out": 279
+   }
+  },
+  "MN": {
+   "monthly": 1166,
+   "categories": {
+    "groceries": 313,
+    "clothing": 125,
+    "gas": 124,
+    "transportation": 153,
+    "recreation": 160,
+    "dining out": 291
+   }
+  },
+  "MO": {
+   "monthly": 1222,
+   "categories": {
+    "groceries": 334,
+    "clothing": 111,
+    "gas": 157,
+    "transportation": 142,
+    "recreation": 170,
+    "dining out": 308
+   }
+  },
+  "MS": {
+   "monthly": 1033,
+   "categories": {
+    "groceries": 340,
+    "clothing": 113,
+    "gas": 120,
+    "transportation": 90,
+    "recreation": 98,
+    "dining out": 272
+   }
+  },
+  "MT": {
+   "monthly": 1414,
+   "categories": {
+    "groceries": 421,
+    "clothing": 102,
+    "gas": 137,
+    "transportation": 187,
+    "recreation": 220,
+    "dining out": 347
+   }
+  },
+  "NC": {
+   "monthly": 1200,
+   "categories": {
+    "groceries": 356,
+    "clothing": 122,
+    "gas": 110,
+    "transportation": 125,
+    "recreation": 168,
+    "dining out": 319
+   }
+  },
+  "ND": {
+   "monthly": 1162,
+   "categories": {
+    "groceries": 318,
+    "clothing": 128,
+    "gas": 85,
+    "transportation": 163,
+    "recreation": 140,
+    "dining out": 328
+   }
+  },
+  "NE": {
+   "monthly": 1161,
+   "categories": {
+    "groceries": 324,
+    "clothing": 105,
+    "gas": 159,
+    "transportation": 153,
+    "recreation": 128,
+    "dining out": 292
+   }
+  },
+  "NH": {
+   "monthly": 1505,
+   "categories": {
+    "groceries": 461,
+    "clothing": 150,
+    "gas": 134,
+    "transportation": 166,
+    "recreation": 237,
+    "dining out": 357
+   }
+  },
+  "NJ": {
+   "monthly": 1332,
+   "categories": {
+    "groceries": 369,
+    "clothing": 157,
+    "gas": 96,
+    "transportation": 160,
+    "recreation": 203,
+    "dining out": 347
+   }
+  },
+  "NM": {
+   "monthly": 1122,
+   "categories": {
+    "groceries": 341,
+    "clothing": 95,
+    "gas": 124,
+    "transportation": 103,
+    "recreation": 120,
+    "dining out": 339
+   }
+  },
+  "NV": {
+   "monthly": 1308,
+   "categories": {
+    "groceries": 381,
+    "clothing": 126,
+    "gas": 102,
+    "transportation": 142,
+    "recreation": 202,
+    "dining out": 355
+   }
+  },
+  "NY": {
+   "monthly": 1357,
+   "categories": {
+    "groceries": 356,
+    "clothing": 152,
+    "gas": 68,
+    "transportation": 201,
+    "recreation": 183,
+    "dining out": 397
+   }
+  },
+  "OH": {
+   "monthly": 1112,
+   "categories": {
+    "groceries": 349,
+    "clothing": 111,
+    "gas": 106,
+    "transportation": 106,
+    "recreation": 154,
+    "dining out": 286
+   }
+  },
+  "OK": {
+   "monthly": 1043,
+   "categories": {
+    "groceries": 273,
+    "clothing": 122,
+    "gas": 133,
+    "transportation": 100,
+    "recreation": 114,
+    "dining out": 301
+   }
+  },
+  "OR": {
+   "monthly": 1346,
+   "categories": {
+    "groceries": 412,
+    "clothing": 141,
+    "gas": 99,
+    "transportation": 160,
+    "recreation": 184,
+    "dining out": 350
+   }
+  },
+  "PA": {
+   "monthly": 1197,
+   "categories": {
+    "groceries": 355,
+    "clothing": 121,
+    "gas": 118,
+    "transportation": 140,
+    "recreation": 172,
+    "dining out": 291
+   }
+  },
+  "RI": {
+   "monthly": 1365,
+   "categories": {
+    "groceries": 377,
+    "clothing": 105,
+    "gas": 75,
+    "transportation": 203,
+    "recreation": 193,
+    "dining out": 412
+   }
+  },
+  "SC": {
+   "monthly": 1235,
+   "categories": {
+    "groceries": 359,
+    "clothing": 123,
+    "gas": 141,
+    "transportation": 114,
+    "recreation": 167,
+    "dining out": 331
+   }
+  },
+  "SD": {
+   "monthly": 1155,
+   "categories": {
+    "groceries": 302,
+    "clothing": 117,
+    "gas": 99,
+    "transportation": 143,
+    "recreation": 179,
+    "dining out": 315
+   }
+  },
+  "TN": {
+   "monthly": 1158,
+   "categories": {
+    "groceries": 301,
+    "clothing": 122,
+    "gas": 111,
+    "transportation": 133,
+    "recreation": 155,
+    "dining out": 336
+   }
+  },
+  "TX": {
+   "monthly": 1256,
+   "categories": {
+    "groceries": 348,
+    "clothing": 128,
+    "gas": 114,
+    "transportation": 141,
+    "recreation": 185,
+    "dining out": 340
+   }
+  },
+  "US": {
+   "monthly": 1300,
+   "categories": {
+    "groceries": 362,
+    "clothing": 130,
+    "gas": 108,
+    "transportation": 162,
+    "recreation": 188,
+    "dining out": 350
+   }
+  },
+  "UT": {
+   "monthly": 1149,
+   "categories": {
+    "groceries": 322,
+    "clothing": 114,
+    "gas": 113,
+    "transportation": 155,
+    "recreation": 169,
+    "dining out": 276
+   }
+  },
+  "VA": {
+   "monthly": 1339,
+   "categories": {
+    "groceries": 370,
+    "clothing": 128,
+    "gas": 107,
+    "transportation": 147,
+    "recreation": 244,
+    "dining out": 343
+   }
+  },
+  "VT": {
+   "monthly": 1398,
+   "categories": {
+    "groceries": 440,
+    "clothing": 93,
+    "gas": 134,
+    "transportation": 169,
+    "recreation": 206,
+    "dining out": 356
+   }
+  },
+  "WA": {
+   "monthly": 1439,
+   "categories": {
+    "groceries": 381,
+    "clothing": 124,
+    "gas": 89,
+    "transportation": 254,
+    "recreation": 240,
+    "dining out": 351
+   }
+  },
+  "WI": {
+   "monthly": 1157,
+   "categories": {
+    "groceries": 337,
+    "clothing": 111,
+    "gas": 151,
+    "transportation": 117,
+    "recreation": 150,
+    "dining out": 291
+   }
+  },
+  "WV": {
+   "monthly": 1015,
+   "categories": {
+    "groceries": 364,
+    "clothing": 93,
+    "gas": 122,
+    "transportation": 76,
+    "recreation": 106,
+    "dining out": 254
+   }
+  },
+  "WY": {
+   "monthly": 1423,
+   "categories": {
+    "groceries": 414,
+    "clothing": 165,
+    "gas": 140,
+    "transportation": 187,
+    "recreation": 185,
+    "dining out": 332
+   }
+  }
+ }
+}

@@ -96,6 +96,11 @@ def _option(opt: dict, base_profile: dict) -> dict:
         "work_city": opt.get("work_city"),
         "miles_from_work": opt.get("miles_from_work") or 0,
         "reasons": [str(r) for r in opt.get("reasons") or []],
+        "score_breakdown": [
+            {"factor": str(b.get("factor", "")), "points": b.get("points"), "weight": b.get("weight"),
+             "detail": str(b.get("detail", ""))}
+            for b in opt.get("score_breakdown") or []
+        ],
         "plan": _plan(opt, profile),
     }
 

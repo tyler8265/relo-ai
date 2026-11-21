@@ -43,6 +43,7 @@ MOCK_PLAN = {
     "monthly_savings": 950,
     "total_needed": 11400,
     "deadline": "2027-06-01",
+    "profile": None,
     "move_in_costs": {
         "first_month": 2400,
         "deposit": 2400,

@@ -1,14 +1,22 @@
 {
   "I'm graduating in May, making 85k in Chicago, $20k in student loans, want to move to Seattle by September 2027. I have $1,000 saved.": {
-    "monthly_savings": 1140,
-    "total_needed": 12392,
+    "monthly_savings": 1284,
+    "total_needed": 13831,
     "deadline": "2027-09-01",
+    "profile": {
+      "target_city": "Seattle, WA",
+      "salary": 85000,
+      "current_savings": 1000,
+      "roommate": false,
+      "current_city": "Chicago, IL",
+      "debt": 20000
+    },
     "move_in_costs": {
       "first_month": 2005,
       "deposit": 2005,
       "movers": 1200,
       "furniture": 1500,
-      "expenses_before_first_paycheck": 0,
+      "expenses_before_first_paycheck": 1439,
       "emergency_buffer": 5682
     },
     "monthly_budget": {
@@ -16,20 +24,24 @@
       "take_home": 5682,
       "bills": 0,
       "debt_payments": 0,
-      "spending": 0,
-      "leftover": 3677
+      "spending": 1439,
+      "leftover": 2238,
+      "roommates": 0,
+      "spending_estimated": true
     },
     "current_budget": {
       "take_home": 5393,
       "rent": 0,
       "bills": 0,
       "debt_payments": 0,
-      "spending": 0,
-      "surplus": 5393
+      "spending": 1325,
+      "surplus": 4068,
+      "spending_estimated": true
     },
     "warnings": [
       "Rent is 35% of take-home pay (guideline: 30%)",
-      "Your monthly bills, debt payments, spending weren't given, so they're counted as $0; add them to size your expenses before the first paycheck and your budget accurately",
+      "You didn't give your monthly spending, so we used $1,439/month, typical everyday spending per person in WA (BEA: groceries, dining out, clothing, gas, transportation, recreation). Tell us yours for a more exact plan",
+      "Your monthly bills and debt payments weren't given, so they're counted as $0; add them to size your expenses before the first paycheck and your budget accurately",
       "You mentioned $20,000 in debt; add your monthly payment to include it in the budget",
       "Your current rent wasn't given, so it's counted as $0"
     ],
@@ -37,15 +49,22 @@
     "options": []
   },
   "I live in Jersey City, NJ and just got a job offer in New York City paying 85k. I want to move by August 2027 and have $2,000 saved.": {
-    "monthly_savings": 1186,
-    "total_needed": 12670,
+    "monthly_savings": 1337,
+    "total_needed": 14027,
     "deadline": "2027-08-01",
+    "profile": {
+      "target_city": "New York, NY",
+      "salary": 85000,
+      "current_savings": 2000,
+      "roommate": false,
+      "current_city": "Jersey City, NJ"
+    },
     "move_in_costs": {
       "first_month": 2432,
       "deposit": 2432,
       "movers": 1200,
       "furniture": 1500,
-      "expenses_before_first_paycheck": 0,
+      "expenses_before_first_paycheck": 1357,
       "emergency_buffer": 5106
     },
     "monthly_budget": {
@@ -53,28 +72,38 @@
       "take_home": 5106,
       "bills": 0,
       "debt_payments": 0,
-      "spending": 0,
-      "leftover": 2674
+      "spending": 1357,
+      "leftover": 1317,
+      "roommates": 0,
+      "spending_estimated": true
     },
     "current_budget": null,
     "warnings": [
       "Rent is 48% of take-home pay (guideline: 30%)",
       "Salary $85,000 is below the 40x-rent rule ($97,280) many NYC landlords use",
-      "Your monthly bills, debt payments, spending weren't given, so they're counted as $0; add them to size your expenses before the first paycheck and your budget accurately"
+      "You didn't give your monthly spending, so we used $1,357/month, typical everyday spending per person in NY (BEA: groceries, dining out, clothing, gas, transportation, recreation). Tell us yours for a more exact plan",
+      "Your monthly bills and debt payments weren't given, so they're counted as $0; add them to size your expenses before the first paycheck and your budget accurately"
     ],
     "follow_up_question": null,
     "options": []
   },
   "I'm in Austin, Texas and got a 72k job in Denver, Colorado. I'd like a 1-bedroom and want to move by July 2027. I have no savings yet.": {
-    "monthly_savings": 1367,
-    "total_needed": 10929,
+    "monthly_savings": 1566,
+    "total_needed": 12523,
     "deadline": "2027-07-01",
+    "profile": {
+      "target_city": "Denver, CO",
+      "salary": 72000,
+      "current_savings": 0,
+      "roommate": false,
+      "current_city": "Austin, TX"
+    },
     "move_in_costs": {
       "first_month": 1759,
       "deposit": 1759,
       "movers": 1200,
       "furniture": 1500,
-      "expenses_before_first_paycheck": 0,
+      "expenses_before_first_paycheck": 1594,
       "emergency_buffer": 4711
     },
     "monthly_budget": {
@@ -82,13 +111,16 @@
       "take_home": 4711,
       "bills": 0,
       "debt_payments": 0,
-      "spending": 0,
-      "leftover": 2952
+      "spending": 1594,
+      "leftover": 1358,
+      "roommates": 0,
+      "spending_estimated": true
     },
     "current_budget": null,
     "warnings": [
       "Rent is 37% of take-home pay (guideline: 30%)",
-      "Your monthly bills, debt payments, spending weren't given, so they're counted as $0; add them to size your expenses before the first paycheck and your budget accurately"
+      "You didn't give your monthly spending, so we used $1,594/month, typical everyday spending per person in CO (BEA: groceries, dining out, clothing, gas, transportation, recreation). Tell us yours for a more exact plan",
+      "Your monthly bills and debt payments weren't given, so they're counted as $0; add them to size your expenses before the first paycheck and your budget accurately"
     ],
     "follow_up_question": null,
     "options": []

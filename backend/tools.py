@@ -59,25 +59,63 @@ def _state_code(state: str | None) -> str | None:
 
 
 def _resolve(city: str, state: str | None = None) -> str | None:
-    """Find a place key for "Seattle", "Seattle, WA" or ("Portland", "ME"). None if unknown."""
+    """Find a key in _PLACES (towns with rent data) for "Seattle", "Seattle, WA" or
+    ("Portland", "ME"). None if the town has no rent data; see _locate for any town."""
+    return _lookup(_BY_NAME, city, state)
+
+
+def _miles(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """Straight-line (great-circle) distance in miles between two (lat, lon) points."""
+    p1, p2 = math.radians(a[0]), math.radians(b[0])
+    dp, dl = p2 - p1, math.radians(b[1] - a[1])
+    h = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 3958.8 * 2 * math.asin(math.sqrt(h))
+
+
+# Every US place (Census Gazetteer), including towns without rent data: key -> (name, state, lat, lon)
+_ANY: dict[str, tuple[str, str, float, float]] = {}
+_ANY_BY_NAME: dict[str, list[str]] = {}
+for _name, _st, _lat, _lon, _pop in sorted(
+        json.loads((Path(__file__).parent / "data" / "place_coords.json").read_text()), key=lambda r: -r[4]):
+    _k = _key(_name, _st)
+    if _k not in _ANY:
+        _ANY[_k] = (_name, _st, _lat, _lon)
+        _ANY_BY_NAME.setdefault(_name.lower(), []).append(_k)
+
+_PROXY_MAX_MILES = 100  # furthest a town with rent data can be to stand in for one without
+
+
+def _lookup(by_name: dict[str, list[str]], city: str, state: str | None) -> str | None:
     name, _, tail = city.partition(",")
     name = name.strip().lower()
     st = _state_code(tail) or _state_code(state)
     # Real names win over aliases, so "Manhattan, KS" isn't treated as New York.
     for n in (name, _CITY_ALIASES.get(name)):
-        candidates = [k for k in _BY_NAME.get(n or "", []) if not st or k.endswith(f"|{st}")]
+        candidates = [k for k in by_name.get(n or "", []) if not st or k.endswith(f"|{st}")]
         if candidates:
             return candidates[0]
     return None
 
 
-def _miles_between(a: str, b: str) -> float:
-    """Straight-line (great-circle) distance in miles between two place keys."""
-    pa, pb = _PLACES[a], _PLACES[b]
-    p1, p2 = math.radians(pa["lat"]), math.radians(pb["lat"])
-    dp, dl = p2 - p1, math.radians(pb["lon"] - pa["lon"])
-    h = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 3958.8 * 2 * math.asin(math.sqrt(h))
+def _locate(city: str, state: str | None = None) -> dict | None:
+    """Find any US town. Returns its name, state, coordinates and the key of the place whose
+    Census rent applies: itself, or the nearest place with rent data (same state preferred)."""
+    key = _resolve(city, state)
+    if key is not None:
+        p = _PLACES[key]
+        return {"name": p["name"], "state": p["state"], "latlon": (p["lat"], p["lon"]),
+                "rent_key": key, "proxy_miles": None}
+    any_key = _lookup(_ANY_BY_NAME, city, state)
+    if any_key is None:
+        return None
+    name, st, lat, lon = _ANY[any_key]
+    nearest = sorted((_miles((lat, lon), (p["lat"], p["lon"])), p["state"] != st, k) for k, p in _PLACES.items())
+    same_state = [n for n in nearest if not n[1] and n[0] <= _PROXY_MAX_MILES]
+    best = same_state[0] if same_state else nearest[0]
+    if best[0] > _PROXY_MAX_MILES:
+        return None
+    return {"name": name, "state": st, "latlon": (lat, lon), "rent_key": best[2],
+            "proxy_miles": round(best[0])}
 
 
 # --- Lifestyle --------------------------------------------------------------------------
@@ -145,6 +183,37 @@ _SS_WAGE_CAP = 176_100
 
 _FURNITURE_ESTIMATE = 1500
 
+# Typical everyday spending per person by state (BEA; see build_spending.py). Used only when the
+# user doesn't give their own monthly spending.
+_SPENDING = json.loads((Path(__file__).parent / "data" / "spending_by_state.json").read_text())
+
+
+def typical_spending(state: str) -> int:
+    """Typical monthly everyday spending per person in a state (BEA), falling back to the US."""
+    states = _SPENDING["states"]
+    return states.get(_state_code(state) or "", states["US"])["monthly"]
+
+
+def _place_label(place: str) -> str | None:
+    """How to show where someone lives now: "Phoenix, AZ", or "Arizona" for a state."""
+    if not place:
+        return None
+    loc = _locate(place)
+    if loc:
+        return f"{loc['name']}, {loc['state']}"
+    st = _state_code(place)
+    names = {v: k.title() for k, v in _STATE_NAMES.items()}
+    return names.get(st or "", place.strip())
+
+
+def _state_of(place: str) -> str | None:
+    """State code for a town ("Phoenix", "Tempe, AZ") or a state name ("Arizona")."""
+    loc = _locate(place) if place else None
+    if loc:
+        return loc["state"]
+    st = _state_code(place)
+    return st if st in _STATE_RATE else None
+
 
 def get_rent(city: str, bedrooms: int = 1, state: str = "") -> dict:
     """Look up median monthly rent for new leases in a US city or town (Census data).
@@ -154,15 +223,24 @@ def get_rent(city: str, bedrooms: int = 1, state: str = "") -> dict:
         bedrooms: Number of bedrooms (0 for studio).
         state: Two-letter state code, to tell apart same-named towns, e.g. "ME".
     """
-    key = _resolve(city, state)
-    if key is None:
-        return {"city": city, "bedrooms": bedrooms, "rent": None, "error": "city not in dataset"}
-    place = _PLACES[key]
-    beds = str(min(max(bedrooms, 0), 3))
-    rent = place["rent"].get(beds)
-    if rent is None:  # no Census estimate for that size: scale from 1BR
-        rent = round(place["rent"]["1"] * {"0": 0.85, "1": 1.0, "2": 1.3, "3": 1.7}[beds])
-    return {"city": place["name"], "state": place["state"], "bedrooms": bedrooms, "rent": rent}
+    loc = _locate(city, state)
+    if loc is None:
+        return {"city": city, "bedrooms": bedrooms, "rent": None, "error": "town not found"}
+    place = _PLACES[loc["rent_key"]]
+    want = min(max(bedrooms, 0), 4)  # Census sizes used: studio through 4 bedrooms
+    used = want
+    rent = place["rent"].get(str(want))
+    if rent is None and want <= 3:  # no Census estimate for that size: scale from 1BR
+        rent = round(place["rent"]["1"] * {0: 0.85, 1: 1.0, 2: 1.3, 3: 1.7}[want])
+    elif rent is None:  # 4+ bedrooms without a reliable estimate: largest size that has one
+        used = max((int(k) for k in place["rent"] if int(k) < want), default=1)
+        rent = place["rent"].get(str(used)) or round(place["rent"]["1"] * {1: 1.0, 2: 1.3, 3: 1.7}.get(used, 1.7))
+    result = {"city": loc["name"], "state": loc["state"], "bedrooms": bedrooms, "rent": rent}
+    if used != want:
+        result["bedrooms_used"] = used
+    if loc["proxy_miles"] is not None:
+        result["rent_from"] = f"{place['name']}, {place['state']} ({loc['proxy_miles']} mi away)"
+    return result
 
 
 def calc_take_home(salary: float, state: str, city: str = "") -> dict:
@@ -208,6 +286,7 @@ def _add_months(d: date, months: int) -> date:
     return date(d.year + y, m + 1, 1)
 
 
+_MAX_ROOMMATES = 3  # rent data goes up to 4 bedrooms (one per person)
 _EMERGENCY_BUFFER_MONTHS = 1  # months of new take-home pay set aside for surprises
 _EXPENSES_BEFORE_PAYCHECK_MONTHS = 1      # months of non-rent expenses before the first paycheck lands
 
@@ -226,6 +305,8 @@ def compute_plan(
     monthly_debt_payments: float | None = None,
     monthly_spending: float | None = None,
     debt_balance: float | None = None,
+    target_rent: float | None = None,
+    roommates: int = 0,
 ) -> dict:
     """Build the full savings plan, including a cushion and a check against the user's
     current budget. Does all lookups and all math; call this once you know the salary,
@@ -246,24 +327,51 @@ def compute_plan(
         monthly_debt_payments: Monthly debt payments (student loans, car loan, credit cards), in USD. Not the balance.
         monthly_spending: Other monthly spending (groceries, eating out, gas, fun), in USD.
         debt_balance: Total debt owed, in USD, only if the user gave a balance but no monthly payment.
+        target_rent: Monthly rent the user says they expect to pay in the new city, in USD. Omit unless they state it.
+        roommates: Number of roommates to split a bigger place with (each gets a bedroom). Default 0.
     """
     try:
         deadline = date.fromisoformat(move_date)
     except ValueError:
         return {"error": f"move_date must be YYYY-MM-DD, got {move_date!r}"}
 
-    key = _resolve(target_city, target_state)
-    if key is None:
-        return {"error": f"no rent data for {target_city}, {target_state}"}
-    place = _PLACES[key]
-    rent = get_rent(place["name"], bedrooms, place["state"])["rent"]
+    loc = _locate(target_city, target_state)
+    if loc is None:
+        return {"error": f"couldn't find a US town called {target_city}, {target_state}. "
+                         "Ask the user to check the spelling or name a nearby larger city."}
+    key = _resolve(loc["name"], loc["state"])  # None if the town itself has no rent data
+    place = {"name": loc["name"], "state": loc["state"]}
+    notes = []
+    roommates = max(0, int(roommates or 0))
+    if roommates > _MAX_ROOMMATES:
+        notes.append(f"Rent data goes up to 4 bedrooms, so this plan assumes {_MAX_ROOMMATES} roommates, "
+                     f"not {roommates}")
+        roommates = _MAX_ROOMMATES
+    if roommates:
+        # Everyone gets a bedroom: rent the Census median for that size and split it evenly.
+        unit_beds = roommates + 1
+        rent_info = get_rent(loc["name"], unit_beds, loc["state"])
+        if (used := rent_info.get("bedrooms_used")) and used >= 2:
+            notes.append(f"No reliable Census rent for a {unit_beds}-bedroom in {loc['name']}, so this plan "
+                         f"assumes {used - 1} roommate{'s' if used > 2 else ''} in a {used}-bedroom")
+            roommates, unit_beds = used - 1, used
+        share = math.ceil(rent_info["rent"] / unit_beds)
+        if not target_rent:
+            notes.append(f"With {roommates} roommate{'s' if roommates > 1 else ''}: a {unit_beds}-bedroom rents "
+                         f"for ${rent_info['rent']:,}, so your share is ${share:,}/month")
+    else:
+        rent_info = get_rent(loc["name"], bedrooms, loc["state"])
+        share = rent_info["rent"]
+    rent = round(target_rent) if target_rent else share  # the user's own share of rent
     take_home = calc_take_home(salary, place["state"], place["name"])["take_home_monthly"]
     movers = get_move_costs(current_city, place["name"])["movers"]
 
-    # The user's recurring costs, which follow them to the new city. Unknown -> 0, flagged below.
+    # The user's recurring costs, which follow them to the new city. Unknown bills/debt -> 0,
+    # unknown everyday spending -> typical for the state (BEA), both flagged below.
     bills = round(monthly_bills or 0)
     debt = round(monthly_debt_payments or 0)
-    spending = round(monthly_spending or 0)
+    spending_given = monthly_spending is not None
+    spending = round(monthly_spending) if spending_given else typical_spending(place["state"])
     other_expenses = bills + debt + spending
 
     move_in_costs = {
@@ -278,13 +386,17 @@ def compute_plan(
     total_needed = sum(move_in_costs.values())
     remaining = max(0, total_needed - round(current_savings))
 
-    warnings = []
+    warnings = notes
     today = date.today()
     months = _months_until(deadline, today)
     if months < 1:
         warnings.append("Move date is less than a month away; the full amount is needed now")
         months = 1
     monthly_savings = math.ceil(remaining / months)
+
+    if not target_rent and "rent_from" in rent_info:
+        warnings.append(f"No Census rent for {loc['name']}; using {rent_info['rent_from']}. "
+                        "Tell us the rent you expect to pay for a more exact plan")
 
     rent_pct = round(rent / take_home * 100) if take_home else 0
     if rent_pct > 30:
@@ -302,11 +414,17 @@ def compute_plan(
             f"by ${-leftover:,}/month"
         )
 
-    missing = [label for label, v in (("bills", monthly_bills), ("debt payments", monthly_debt_payments),
-                                      ("spending", monthly_spending)) if v is None]
+    if not spending_given:
+        warnings.append(
+            f"You didn't give your monthly spending, so we used ${spending:,}/month, typical everyday "
+            f"spending per person in {place['state']} (BEA: groceries, dining out, clothing, gas, "
+            "transportation, recreation). Tell us yours for a more exact plan"
+        )
+    missing = [label for label, v in (("bills", monthly_bills), ("debt payments", monthly_debt_payments))
+               if v is None]
     if missing:
         warnings.append(
-            f"Your monthly {', '.join(missing)} weren't given, so they're counted as $0; "
+            f"Your monthly {' and '.join(missing)} weren't given, so they're counted as $0; "
             "add them to size your expenses before the first paycheck and your budget accurately"
         )
     if debt_balance and monthly_debt_payments is None:
@@ -317,15 +435,16 @@ def compute_plan(
     # Before the move: can they actually save monthly_savings from their current budget?
     current_budget = None
     if current_salary is not None:
-        cur_key = _resolve(current_city) if current_city else None
-        cur_state = _PLACES[cur_key]["state"] if cur_key else place["state"]
+        cur_state = _state_of(current_city) or place["state"]
         cur_take_home = (calc_take_home(current_salary, cur_state, current_city)["take_home_monthly"]
                          if current_salary > 0 else 0)
         cur_rent = round(current_rent or 0)
-        surplus = cur_take_home - cur_rent - other_expenses
+        cur_spending = spending if spending_given else typical_spending(cur_state)
+        surplus = cur_take_home - cur_rent - bills - debt - cur_spending
         current_budget = {
             "take_home": cur_take_home, "rent": cur_rent, "bills": bills,
-            "debt_payments": debt, "spending": spending, "surplus": surplus,
+            "debt_payments": debt, "spending": cur_spending, "surplus": surplus,
+            "spending_estimated": not spending_given,
         }
         if current_rent is None:
             warnings.append("Your current rent wasn't given, so it's counted as $0")
@@ -342,14 +461,27 @@ def compute_plan(
                 f"At ${surplus:,}/month you'd have the full amount by {ready.strftime('%B %Y')}"
             )
 
+    # The move itself, echoed back so the UI can show the route (From -> To) and the user's details.
+    profile = {"target_city": f"{loc['name']}, {loc['state']}", "salary": salary,
+               "current_savings": round(current_savings), "roommate": roommates > 0,
+               "roommates": roommates}
+    if (label := _place_label(current_city)):
+        profile["current_city"] = label
+    if monthly_bills is not None:
+        profile["monthly_bills"] = round(monthly_bills)
+    if debt_balance:
+        profile["debt"] = round(debt_balance)
+
     return {
         "monthly_savings": monthly_savings,
         "total_needed": total_needed,
         "deadline": deadline.isoformat(),
+        "profile": profile,
         "move_in_costs": move_in_costs,
         "monthly_budget": {
             "rent": rent, "take_home": take_home, "bills": bills,
             "debt_payments": debt, "spending": spending, "leftover": leftover,
+            "roommates": roommates, "spending_estimated": not spending_given,
         },
         "current_budget": current_budget,
         "warnings": warnings,
@@ -390,6 +522,8 @@ def compare_options(
     monthly_debt_payments: float | None = None,
     monthly_spending: float | None = None,
     debt_balance: float | None = None,
+    roommates: int = 0,
+    suburbs_only: bool = False,
 ) -> dict:
     """Rank the top 3 places to live and build a savings plan for each. Use this when the
     user has several job offers, is choosing between cities, wants recommendations or
@@ -415,32 +549,34 @@ def compare_options(
         monthly_debt_payments: Monthly debt payments (student loans, car loan, credit cards), in USD. Not the balance.
         monthly_spending: Other monthly spending (groceries, eating out, gas, fun), in USD.
         debt_balance: Total debt owed, in USD, only if the user gave a balance but no monthly payment.
+        roommates: Number of roommates to split a bigger place with (each gets a bedroom). Default 0.
+        suburbs_only: True if the user wants a suburb / to live outside the work city itself.
     """
     finances = dict(current_salary=current_salary, current_rent=current_rent, monthly_bills=monthly_bills,
                     monthly_debt_payments=monthly_debt_payments, monthly_spending=monthly_spending,
-                    debt_balance=debt_balance)
+                    debt_balance=debt_balance, roommates=roommates)
     prefs = [p for p in (preferences or []) if p in _LIFESTYLE_KEYS]
 
-    # Jobs: (work place key or None if remote, salary, name the user gave)
+    # Jobs: (work location from _locate, or None if remote; salary; name the user gave)
     if offers:
-        jobs = [(_resolve(o["city"], o.get("state")), o["salary"], o["city"]) for o in offers]
-        unknown = [name for key, _, name in jobs if key is None]
+        jobs = [(_locate(o["city"], o.get("state")), o["salary"], o["city"]) for o in offers]
+        unknown = [name for loc, _, name in jobs if loc is None]
         jobs = [j for j in jobs if j[0] is not None]
     elif salary is not None:
-        key = _resolve(work_city, work_state) if work_city else None
-        unknown = [work_city] if work_city and key is None else []
-        jobs = [] if unknown else [(key, salary, work_city)]
+        loc = _locate(work_city, work_state) if work_city else None
+        unknown = [work_city] if work_city and loc is None else []
+        jobs = [] if unknown else [(loc, salary, work_city)]
     else:
         return {"error": "need either offers or a salary"}
     if not jobs:
-        return {"error": f"no location data for: {', '.join(unknown)}"}
+        return {"error": f"couldn't find a US town called: {', '.join(unknown)}"}
 
     best: dict[str, dict] = {}  # place key -> best-scoring option for that place
-    for work_key, job_salary, _ in jobs:
-        work_name = _PLACES[work_key]["name"] if work_key else None
+    for work_loc, job_salary, _ in jobs:
+        work_name = work_loc["name"] if work_loc else None
         for key, place in _PLACES.items():
-            miles = _miles_between(work_key, key) if work_key else None
-            if miles is not None and miles > radius_miles:
+            miles = _miles(work_loc["latlon"], (place["lat"], place["lon"])) if work_loc else None
+            if miles is not None and (miles > radius_miles or (suburbs_only and miles < 1)):
                 continue
             plan = compute_plan(job_salary, place["name"], place["state"], move_date,
                                 current_city=current_city, bedrooms=bedrooms,
@@ -450,29 +586,42 @@ def compare_options(
 
             budget = plan["monthly_budget"]
             rent_pct = round(budget["rent"] / budget["take_home"] * 100) if budget["take_home"] else 100
-            parts = [(0.5, _affordability(rent_pct))]
+            # (factor, weight, points 0-100, explanation)
+            parts = [("Affordability", 0.5, _affordability(rent_pct),
+                      f"Rent ${budget['rent']:,} is {rent_pct}% of take-home pay (${budget['take_home']:,}). "
+                      "30% or less earns full points; 60% or more earns none.")]
             reasons = [f"Rent is {rent_pct}% of take-home pay"]
             if len(jobs) > 1:  # only worth saying which job when comparing several
                 reasons.insert(0, f"Job in {work_name} at ${job_salary:,.0f}")
             if miles is not None:
-                parts.append((0.2, _commute(miles, radius_miles)))
+                parts.append(("Commute", 0.2, _commute(miles, radius_miles),
+                              (f"{miles:.0f} mi from {work_name} (straight line). " if miles >= 1
+                               else f"In {work_name} itself. ")
+                              + f"0 mi earns full points; {radius_miles:g} mi earns none."))
                 if miles >= 1:
                     reasons.append(f"{miles:.0f} mi from {work_name} (straight line)")
             if prefs:
                 est = _LIFESTYLE.get(key)
                 scores: dict[str, int] = dict(zip(_LIFESTYLE_KEYS, est or (_NEUTRAL,) * 5))
-                parts.append((0.3, sum(scores[p] for p in prefs) / len(prefs) / 5 * 100))
                 if est:
+                    detail = ", ".join(f"{p} {scores[p]}/5" for p in prefs) + " (hand-assigned estimates)."
                     reasons += [f"{p.capitalize()}: {scores[p]}/5 (estimate)" for p in prefs]
                 else:
+                    detail = f"No {'/'.join(prefs)} data for this town, so it's scored as average (3/5)."
                     reasons.append(f"No {'/'.join(prefs)} data; scored as average")
-            score = round(sum(w * x for w, x in parts) / sum(w for w, _ in parts))
+                parts.append(("Lifestyle", 0.3, sum(scores[p] for p in prefs) / len(prefs) / 5 * 100, detail))
+            total_w = sum(w for _, w, _, _ in parts)
+            score = round(sum(w * x for _, w, x, _ in parts) / total_w)
+            breakdown = [
+                {"factor": f, "points": round(x), "weight": round(w / total_w * 100), "detail": d}
+                for f, w, x, d in parts
+            ]
 
             option = {
                 "city": place["name"], "state": place["state"], "salary": job_salary,
                 "work_city": work_name,
                 "miles_from_work": round(miles, 1) if miles is not None else None,
-                "score": score, "reasons": reasons, **plan,
+                "score": score, "score_breakdown": breakdown, "reasons": reasons, **plan,
             }
             if key not in best or score > best[key]["score"]:
                 best[key] = option

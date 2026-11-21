@@ -10,6 +10,7 @@
   const els = {
     thread: $("#thread"), intro: $("#intro"), form: $("#composer"), input: $("#composer-input"),
     send: $("#send"), whatifs: $("#whatifs"), reset: $("#reset"), mockBadge: $("#mock-badge"),
+    addRoommate: $("#add-roommate"),
     blank: $("#blank"), plan: $("#plan"), board: $("#board"), loadSample: $("#load-sample"),
   };
 
@@ -61,6 +62,7 @@
     els.send.disabled = b;
     els.whatifs.querySelectorAll("button").forEach((x) => (x.disabled = b));
     els.thread.querySelectorAll(".example").forEach((x) => (x.disabled = b));
+    updateRoommateButton(); // keeps it disabled at the max even when the rest re-enable
   }
 
   async function ask(text) {
@@ -101,6 +103,28 @@
   }
 
   // ---------- plan ----------
+  // ---------- roommates ----------
+  const MAX_ROOMMATES = 3; // rent data goes up to 4 bedrooms, one per person
+  const ORDINAL = ["", "", "2nd", "3rd"];
+  function roommateCount() {
+    const prof = (state.plan && state.plan.profile) || {};
+    return Number.isFinite(prof.roommates) ? prof.roommates : (prof.roommate ? 1 : 0);
+  }
+  // Label the button for the next press: "Add a roommate", "Add a 2nd roommate", ... "3 roommates max".
+  function updateRoommateButton() {
+    const next = roommateCount() + 1;
+    const atMax = next > MAX_ROOMMATES;
+    els.addRoommate.disabled = atMax || state.busy;
+    els.addRoommate.textContent = atMax ? `${MAX_ROOMMATES} roommates max`
+      : next === 1 ? "Add a roommate" : `Add a ${ORDINAL[next]} roommate`;
+  }
+  function addRoommate() {
+    const next = roommateCount() + 1;
+    if (next > MAX_ROOMMATES) return;
+    // Say the exact number, so each press adds one more instead of re-asking for "a roommate".
+    ask(`What if I had ${next} roommate${next === 1 ? "" : "s"}? Keep everything else the same.`);
+  }
+
   function showPlan(plan, options, index = 0) {
     state.prev = state.plan;
     state.plan = plan;
@@ -110,6 +134,7 @@
     els.whatifs.hidden = false;
     els.reset.hidden = false;
     els.plan.innerHTML = renderPlan(plan, state.prev);
+    updateRoommateButton();
     const pass = els.plan.querySelector(".pass");
     if (!reduceMotion) {
       pass.classList.remove("printing"); void pass.offsetWidth; pass.classList.add("printing");
@@ -148,6 +173,20 @@
       fits ? `Saving ${money(p.monthly_savings)} a month fits.` : `Saving ${money(p.monthly_savings)} a month doesn't fit yet.`}</p>`;
   }
 
+  // Why the selected town got its score: each factor's points, its share of the score, and the reason.
+  function renderBreakdown(o) {
+    const parts = o.score_breakdown || [];
+    if (!parts.length) return "";
+    const sum = parts.map((b) => `${b.points} × ${b.weight}%`).join(" + ");
+    const rows = parts.map((b) => `<span class="bd-row">
+        <span class="bd-factor">${esc(b.factor)}</span>
+        <span class="bd-pts"><b>${b.points}</b>/100 · ${b.weight}% of score</span>
+        <span class="bd-detail">${esc(b.detail)}</span>
+      </span>`).join("");
+    return `<span class="opt-breakdown">
+      <span class="bd-head">Why ${o.score ?? "–"}: ${esc(sum)}</span>${rows}</span>`;
+  }
+
   function renderOptions() {
     const opts = state.options;
     if (!opts || opts.length < 2) return "";
@@ -162,6 +201,7 @@
         <span class="opt-num opt-fare"><span class="label">Fare</span><b>${money(o.plan.target_total)}</b></span>
         <span class="opt-num opt-month"><span class="label">Per month</span><b>${money(o.plan.monthly_savings)}</b></span>
         <span class="opt-tag">${on ? "On your pass" : "Show this"}</span>
+        ${on ? renderBreakdown(o) : ""}
       </button></li>`;
     }).join("");
     return `<section class="sec options" aria-labelledby="h-options">
@@ -318,6 +358,7 @@
     els.plan.hidden = true; els.plan.innerHTML = "";
     els.blank.hidden = false;
     els.whatifs.hidden = true; els.reset.hidden = true;
+    updateRoommateButton();
     els.input.value = ""; els.input.focus();
   }
 
@@ -341,7 +382,10 @@
   const autosize = () => { els.input.style.height = "auto"; els.input.style.height = Math.min(200, els.input.scrollHeight + 2) + "px"; };
   els.input.addEventListener("input", autosize);
   document.querySelectorAll(".example").forEach((b) => b.addEventListener("click", () => ask(b.dataset.text)));
-  els.whatifs.addEventListener("click", (e) => { const b = e.target.closest("[data-ask]"); if (b) ask(b.dataset.ask); });
+  els.whatifs.addEventListener("click", (e) => {
+    if (e.target.closest("#add-roommate")) return addRoommate();
+    const b = e.target.closest("[data-ask]"); if (b) ask(b.dataset.ask);
+  });
   els.reset.addEventListener("click", reset);
   els.loadSample.addEventListener("click", () => loadSample());
   els.plan.addEventListener("click", (e) => {

@@ -1,3 +1,4 @@
-streamlit
-google-genai
+# Installed by Vercel for api/index.py (and usable locally: pip install -r requirements.txt)
+fastapi
+groq
 python-dotenv

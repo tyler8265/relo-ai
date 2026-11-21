@@ -97,7 +97,8 @@ def respond(messages: list[dict]) -> tuple[dict, str]:
     if _build_plan is None:
         return _mock(messages, _agent_error or "unavailable")
     try:
-        result = _build_plan(situation)
+        # The whole chat, in order, so follow-ups like "add another roommate" build on earlier turns.
+        result = _build_plan(messages)
     except Exception as e:  # noqa: BLE001  (rate limits, network) — keep the demo alive
         traceback.print_exc()
         return _mock(messages, f"{type(e).__name__}")

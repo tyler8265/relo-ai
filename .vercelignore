@@ -1,0 +1,10 @@
+# Never upload secrets or local environments
+.env
+**/.env
+backend/venv/
+**/__pycache__/
+node_modules/
+.git/
+.impeccable/
+.env.local
+.env.*

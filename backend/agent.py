@@ -9,17 +9,53 @@ import json
 import os
 import re
 from datetime import date
+import time
 import types
+from pathlib import Path
 from typing import Any, Callable, Literal, Union, get_args, get_origin, get_type_hints, is_typeddict
 
 from dotenv import load_dotenv
-from groq import Groq
+from groq import APIStatusError, Groq, RateLimitError
 
 from tools import TOOLS
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")  # backend/.env, wherever this is imported from
 MODEL = os.environ["GROQ_MODEL"]
+# Tried in order when MODEL is rate-limited (each Groq model has its own token limits).
+# Comma-separated; models your Groq org has blocked are skipped.
+FALLBACK_MODELS = [m.strip() for m in os.environ.get("GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b").split(",")
+                   if m.strip() and m.strip() != MODEL]
+MAX_RETRY_WAIT = 15  # seconds; per-minute limits usually clear within a few seconds
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
+
+
+def _retry_after(err: RateLimitError) -> float | None:
+    try:
+        return float(err.response.headers.get("retry-after", ""))
+    except (TypeError, ValueError):
+        return None
+
+
+def _chat(**kwargs):
+    """One Groq call. On a rate limit: wait and retry MODEL once if Groq says it's a short wait
+    (per-minute limit), then try each fallback model. Blocked or unavailable fallbacks are skipped.
+    If nothing works, the original rate-limit error is raised."""
+    try:
+        return client.chat.completions.create(model=MODEL, **kwargs)
+    except RateLimitError as first:
+        wait = _retry_after(first)
+        if wait is not None and wait <= MAX_RETRY_WAIT:
+            time.sleep(wait + 0.5)
+            try:
+                return client.chat.completions.create(model=MODEL, **kwargs)
+            except RateLimitError:
+                pass
+        for model in FALLBACK_MODELS:
+            try:
+                return client.chat.completions.create(model=model, **kwargs)
+            except (RateLimitError, APIStatusError):  # limited too, blocked (403) or unknown (404)
+                continue
+        raise first
 
 MAX_TURNS = 8
 
@@ -55,6 +91,7 @@ def _empty_contract(follow_up: str | None = None) -> dict:
         "monthly_savings": None,
         "total_needed": None,
         "deadline": None,
+        "profile": None,
         "move_in_costs": None,
         "monthly_budget": None,
         "current_budget": None,
@@ -112,7 +149,10 @@ Choose ONE planning tool:
   the user gives one). Omit work_city only for remote work with no preferred area. Map
   preferences to the allowed tags (e.g. "bars and clubs" -> nightlife, "hiking" -> outdoors,
   "no car" -> transit).
-- compute_plan: one known target city and salary, with no preferences or alternatives.
+  ALSO use compare_options (with work_city = the job's city) whenever the user wants a suburb,
+  to live "nearby", "outside the city", in "the <city> area", or asks where to live. Set
+  suburbs_only true for "suburb" / "outside the city".
+- compute_plan: one specific town to live in, with no preferences, alternatives or area request.
 
 Rules:
 - You NEVER do arithmetic, NEVER rank cities yourself, and NEVER invent dollar figures or scores.
@@ -131,12 +171,24 @@ Rules:
 - If the user mentions only ONE salary, it is the new job's salary: never ask for the salary
   again. Pass it as current_salary too only if they clearly say they earn it now at a current
   job they're leaving. If they're a student with no income, pass current_salary 0.
-- If a tool returns an error, ask the user a follow-up question that would resolve it."""
+- If the user states the rent they expect to pay in the new city, pass it as target_rent.
+- Roommates: "a roommate" -> roommates 1, "two roommates" -> 2. Pass it to whichever planning tool
+  you use.
+- Follow-ups ("what if I get a roommate?", "what about the Boston area?", "move in December
+  instead"): call a planning tool again with ALL earlier details plus the change. Never repeat
+  the previous plan unchanged. Later messages override earlier ones.
+- Roommates are cumulative across the conversation: "a roommate" = 1; "another roommate" /
+  "add one more" = the current count + 1; "2 roommates" / "3 roommates" = exactly that number;
+  "no roommates" / "live alone" = 0. Count carefully before calling the tool.
+- If a tool returns an error, ask the user a follow-up question that would resolve it. Never ask
+  the same question twice: if the user already answered it, call the tool with their answer.
+- Every US town works, even small ones (the tools use the nearest town with rent data). Never ask
+  the user for rent just because a town is small."""
 
 FINAL_INSTRUCTION = """You could not build a plan. Reply with a JSON object with exactly one key,
 follow_up_question: one short question asking for the missing details. Output only the JSON."""
 
-PLAN_KEYS = ("monthly_savings", "total_needed", "deadline", "move_in_costs", "monthly_budget",
+PLAN_KEYS = ("monthly_savings", "total_needed", "deadline", "profile", "move_in_costs", "monthly_budget",
              "current_budget", "warnings", "follow_up_question")
 
 
@@ -162,19 +214,23 @@ def _run_tool(name: str, raw_args: str) -> Any:
         return {"error": f"{type(e).__name__}: {e}"}
 
 
-def build_plan(situation: str) -> dict:
-    """Run the tool-calling loop and return a dict matching the /plan contract."""
-    messages: list[dict] = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": situation},
-    ]
+def build_plan(situation: str | list[dict]) -> dict:
+    """Run the tool-calling loop and return a dict matching the /plan contract.
+
+    situation is the user's text, or a whole chat as [{"role": "user"|"assistant", "content"}]
+    so follow-ups ("add another roommate") are read in order.
+    """
+    if isinstance(situation, str):
+        convo = [{"role": "user", "content": situation}]
+    else:
+        convo = [{"role": m["role"], "content": str(m.get("content", ""))} for m in situation
+                 if m.get("role") in ("user", "assistant") and m.get("content")]
+    messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}, *convo]
     plan: dict | None = None  # last successful planning-tool result: the source of truth
 
     # 1) Tool loop: keep going until the model answers without requesting tools.
     for _ in range(MAX_TURNS):
-        resp = client.chat.completions.create(
-            model=MODEL, messages=messages, tools=TOOL_SCHEMAS, tool_choice="auto", temperature=0
-        )
+        resp = _chat(messages=messages, tools=TOOL_SCHEMAS, tool_choice="auto", temperature=0)
         msg = resp.choices[0].message
         if not msg.tool_calls:
             messages.append({"role": "assistant", "content": msg.content or ""})
@@ -210,9 +266,7 @@ def build_plan(situation: str) -> dict:
 
     # 3) No plan: ask for the follow-up question in JSON mode (no tools; Groq won't combine them).
     messages.append({"role": "user", "content": FINAL_INSTRUCTION})
-    resp = client.chat.completions.create(
-        model=MODEL, messages=messages, response_format={"type": "json_object"}, temperature=0
-    )
+    resp = _chat(messages=messages, response_format={"type": "json_object"}, temperature=0)
     try:
         answer = json.loads(resp.choices[0].message.content or "{}")
     except json.JSONDecodeError:

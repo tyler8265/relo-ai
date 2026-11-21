@@ -71,9 +71,10 @@ Stack: Python, FastAPI, the `groq` SDK (model `openai/gpt-oss-120b`, OpenAI-styl
 | Taxes | Approximate: federal brackets, FICA, a flat rate per state, approximate NYC city tax |
 | Movers and furniture | Flat estimates: $1,200 for a long-distance move ($500 local) and $1,500 for furniture |
 | Lifestyle scores | Hand-assigned estimates for about 55 places, labeled "(estimate)". Other towns score average and say "no data". |
-| User's finances | Whatever the user types. Missing amounts count as $0, and a warning says so. |
+| Typical spending (when the user gives none) | U.S. Bureau of Economic Analysis, per-person spending by state, 2024 (table SAPCE2): groceries, dining out, clothing, gas, transportation and recreation. That's about $1,300/month nationally, ranging from $999 (Arkansas) to $1,998 (DC). Housing, health care and financial services are left out. |
+| User's finances | Whatever the user types. Missing spending uses the typical amount for their state; missing bills and debt payments count as $0. A warning says which. |
 
-`backend/build_places.py` rebuilds `data/places.json` from the free Census bulk files; the download links are in its docstring.
+`backend/build_places.py` rebuilds `data/places.json` and `data/place_coords.json` from the free Census bulk files, and `backend/build_spending.py` rebuilds `data/spending_by_state.json` from BEA. The download links are in each script's docstring.
 
 ## Running it
 
